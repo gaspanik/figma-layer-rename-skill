@@ -1,0 +1,134 @@
+# Logs
+logs
+*.logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Build outputs
+dist
+dist-ssr
+build
+out
+.output
+.vercel
+.netlify
+*.local
+
+# Environment variables
+.env
+.env.production
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+.env.*.local
+.env.keys
+
+
+# Cache directories
+.cache
+.parcel-cache
+.eslintcache
+.stylelintcache
+.turbo
+.next
+.nuxt
+.vitepress/cache
+.vitepress/dist
+.docusaurus
+.astro
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*~
+
+# OS files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.AppleDouble
+.LSOverride
+._*
+
+# Testing
+coverage
+*.lcov
+.nyc_output
+junit.xml
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Temporary files
+*.tmp
+*.temp
+.temp/
+.tmp/
+
+# Debug
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+.tsbuildinfo
+
+# Storybook
+storybook-static
+
+# React Router
+/.react-router/
+
+# Lock files (optional - keep for reproducible builds)
+# Uncomment to ignore lock files in personal projects
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# MISE private settings
+mise.local.toml
+
+# Tanstack Router
+.nitro
+.tanstack
+
+# Wrangler
+.wrangler
+
+# generated types
+.astro/
