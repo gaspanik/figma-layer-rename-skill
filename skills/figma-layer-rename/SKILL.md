@@ -119,14 +119,16 @@ const renames = [
   { id: '123:789', name: 'LabelGroup' },
 ];
 
+const renamedIds = [];
 for (const { id, name } of renames) {
-  const node = figma.getNodeById(id);
+  const node = await figma.getNodeByIdAsync(id);
   if (node) {
     node.name = name;
+    renamedIds.push(id);
   }
 }
 
-figma.notify(`Renamed ${renames.length} layer(s)`);
+return { renamedCount: renamedIds.length, renamedIds };
 ```
 
 ---
