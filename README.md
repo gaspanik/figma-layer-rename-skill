@@ -35,7 +35,7 @@ INSTANCE subtrees are skipped entirely — renaming inside an instance only crea
 
 - **In scope:** auto-generated layer names anywhere in the tree — `Frame N`, `Group N`, `Rectangle N`, `Ellipse N`, `Vector N`, `Polygon N`, `Star N`, `Line N`, `Arrow N`, `Boolean N`, `Component N`, `Instance N`, with or without a trailing number.
 - **Out of scope:** variable binding, auto-layout changes, component properties. Nothing about the frame's structure or values changes — only names.
-- **Not for components.** A `COMPONENT` or `COMPONENT_SET` URL should go to `figma-component-audit-fix` instead — it covers layer renaming for components with the added benefit of cross-checking variant siblings.
+- **Not for components.** `COMPONENT` and `COMPONENT_SET` URLs are not supported.
 
 ---
 
@@ -86,14 +86,7 @@ Clean up the generic layer names in this frame: https://www.figma.com/design/...
 
 ## When the skill is triggered automatically
 
-The skill description instructs Claude to use it whenever the user wants to clean up layer names across a whole frame, section, or page layout — not a single component (that routes to `figma-component-audit-fix`).
-
----
-
-## Related
-
-- [figma-tokenize](https://github.com/gaspanik/figma-tokenize-skill) — delegates its layer-renaming pass to this skill, then extends it with color/typography/spacing tokenization
-- `figma-component-audit-fix` — the component/component-set equivalent (not yet published as a standalone repo)
+The skill description instructs Claude to use it whenever the user wants to clean up layer names across a whole frame, section, or page layout. Component and component-set URLs are not supported.
 
 ---
 
