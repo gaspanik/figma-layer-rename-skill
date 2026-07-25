@@ -1,6 +1,6 @@
 ---
 name: figma-layer-rename
-description: Accepts a Figma FRAME or SECTION URL, walks the entire node tree, detects auto-generated layer names, and renames them to semantic names via the Plugin API after user confirmation. Use this whenever the user wants to clean up layer names across a whole frame/section/page layout. Component and component-set URLs are not supported.
+description: Accepts a Figma FRAME or SECTION URL, walks the entire node tree, detects auto-generated layer names, and renames them to semantic names via the Plugin API after user confirmation. Also offers an optional pass to differentiate duplicate generic-but-meaningful sibling names (e.g. multiple top-level nodes all named `Section` or `Container`) at a bounded depth. Use this whenever the user wants to clean up layer names across a whole frame/section/page layout, not a single component — for single-component or component-set renaming, use figma-component-audit-fix instead.
 argument-hint: <figma-frame-url>
 allowed-tools: mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__use_figma
 ---
@@ -11,19 +11,18 @@ Analyze the Figma FRAME or SECTION URL provided in `$ARGUMENTS`, detect auto-gen
 
 **Output language:** Respond in the same language the user is using in this conversation.
 
-**Requirements:** Requires a connection to the official Figma MCP server — this skill calls `get_metadata` and `use_figma` against it.
-
 ## Scope
 
-This skill fixes exactly one category of issue:
+This skill fixes two categories of issue:
 
-- **Auto-generated layer names** — `Frame N`, `Group N`, `Rectangle N`, `Ellipse N`, `Vector N`, etc.
+- **Auto-generated layer names** — `Frame N`, `Group N`, `Rectangle N`, `Ellipse N`, `Vector N`, etc. (Step 3, always runs).
+- **Duplicate generic-but-meaningful sibling names** — e.g. four different top-level sections all literally named `Section`, or a dozen unrelated `Container`s. These aren't auto-generated (the name itself is real/semantic), but sharing one name across structurally distinct siblings is just as hard to navigate. This pass is optional, bounded to a shallow depth, and only offered when duplicates are actually found (Step 3.5).
 
 Nothing else. No variable binding, no auto-layout changes, no component property changes.
 
 **Target node types:** FRAME or SECTION only.
 
-- If the URL points to a `COMPONENT` or `COMPONENT_SET`, don't proceed — tell the user that component/component-set URLs aren't supported by this skill.
+- If the URL points to a `COMPONENT` or `COMPONENT_SET`, don't proceed — tell the user to use the `figma-component-audit-fix` skill instead. That skill already covers layer renaming for components, and its rename logic also cross-checks variant siblings, which this skill doesn't do.
 - Any other node type (e.g. a single `TEXT` or `RECTANGLE` node): ask the user for a frame or section URL.
 
 **Skip `INSTANCE` subtrees entirely.** A frame will often contain instances of components used elsewhere in the file. Renaming a layer inside an instance only creates a local override on that one instance — it does not touch the main component, so the name silently diverges from every other instance and from the source of truth. When walking the tree, if a node's type is `INSTANCE`, don't inspect or rename it or any of its descendants; just skip past it.
@@ -47,7 +46,7 @@ Call `get_metadata` for the target node to retrieve the full layer hierarchy (no
 Check the root node's type:
 
 - `FRAME` or `SECTION` → continue
-- `COMPONENT` or `COMPONENT_SET` → stop and tell the user: "このURLはコンポーネントです。このスキルはコンポーネント／コンポーネントセットのURLには対応していません。" (adapt to the conversation language)
+- `COMPONENT` or `COMPONENT_SET` → stop and tell the user: "このURLはコンポーネントです。レイヤー名の修正には `figma-component-audit-fix` スキルを使ってください。" (adapt to the conversation language)
 - anything else → ask for a valid frame or section URL
 
 ---
@@ -81,9 +80,35 @@ A large frame can easily produce dozens of candidates. If the list grows very lo
 
 ---
 
+## Step 3.5: Detect duplicate generic sibling names (optional pass)
+
+This catches a different problem from Step 3. A name like `Section` or `Container` is real and semantic — it doesn't match the auto-generated regex, so Step 3 correctly leaves it alone. But when the *same* name repeats across siblings that are actually different things (a hero section, a pricing section, and a footer section all just named `Section`), the name stops being useful for telling them apart, even though it's technically meaningful.
+
+**Scope this narrowly** so it doesn't false-flag siblings that are *supposed* to share a name (e.g. repeated `List Item` in a nav, or repeated `Card` in a grid of same-shaped cards — renaming those would actively hurt, since the repetition itself is the point). Only check at a bounded, shallow depth from the root passed in `$ARGUMENTS`:
+
+- **Depth 1**: direct children of the root node
+- **Depth 2**: direct children of the root, plus their direct children
+
+At the chosen depth, group nodes by parent, then by name (skip `INSTANCE` subtrees, same as Step 3). Any name shared by 2+ siblings under the same parent is a duplicate-name candidate — this applies regardless of whether that name matched Step 3's auto-generated regex.
+
+**If no duplicates are found at either depth, skip this step silently** — don't ask the question below, don't mention it in the output.
+
+**If duplicates are found**, ask before building candidates:
+
+> このフレームには、同じ名前が複数使われている箇所があります（例: `Section` が4箇所、`Container` が◯箇所）。厳密には自動生成名ではありませんが、区別しにくいので合わせてリネーム対象にしますか？
+> - **含めない**（デフォルト。Step 3の結果のみ適用）
+> - **ルート直下のみ含める**（Depth 1）
+> - **ルート直下+1階層下まで含める**（Depth 2）
+
+If the user opts in, infer a semantic name for each duplicate using the same content-based reasoning as Step 3 (position in the tree, sibling/parent context, children content — e.g. the `Section` containing a countdown timer and a coupon code → `PricingSection`; the `Container` holding three stat numbers → `StatsRow`). Merge these into the same candidate list as Step 3's results, tagging the reason so the user can tell the two categories apart (e.g. "重複名の差別化" vs. an auto-generated-name reason).
+
+If the user declines, proceed to Step 4 with only Step 3's candidates (if any).
+
+---
+
 ## Step 4: Present rename candidates and ask for confirmation
 
-If no auto-generated names are found, output:
+If no auto-generated names were found in Step 3, and Step 3.5 found no duplicates (or the user declined to include them), output:
 
 ```
 ✅ 自動生成されたレイヤー名は見つかりませんでした。
@@ -92,7 +117,7 @@ If no auto-generated names are found, output:
 
 Then stop.
 
-If candidates are found, output the following table and ask for confirmation:
+If candidates are found (from Step 3, Step 3.5, or both), output the following table and ask for confirmation:
 
 ---
 
@@ -156,7 +181,7 @@ After applying all approved renames, output:
 ## Error handling
 
 - If fileKey or nodeId cannot be parsed: ask for a valid URL
-- If the node is a `COMPONENT` or `COMPONENT_SET`: tell the user component/component-set URLs aren't supported
+- If the node is a `COMPONENT` or `COMPONENT_SET`: redirect the user to `figma-component-audit-fix`
 - If the node is neither FRAME/SECTION nor COMPONENT/COMPONENT_SET: ask for a valid frame or section URL
 - If `get_metadata` returns an error: report it and ask the user to verify Figma file access
 - If `use_figma` fails for a specific node: report the failure inline and continue with remaining items
