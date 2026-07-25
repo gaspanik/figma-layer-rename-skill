@@ -84,21 +84,32 @@ A large frame can easily produce dozens of candidates. If the list grows very lo
 
 This catches a different problem from Step 3. A name like `Section` or `Container` is real and semantic — it doesn't match the auto-generated regex, so Step 3 correctly leaves it alone. But when the *same* name repeats across siblings that are actually different things (a hero section, a pricing section, and a footer section all just named `Section`), the name stops being useful for telling them apart, even though it's technically meaningful.
 
-**Scope this narrowly** so it doesn't false-flag siblings that are *supposed* to share a name (e.g. repeated `List Item` in a nav, or repeated `Card` in a grid of same-shaped cards — renaming those would actively hurt, since the repetition itself is the point). Only check at a bounded, shallow depth from the root passed in `$ARGUMENTS`:
+**Scope this by depth** so it doesn't false-flag siblings that are *supposed* to share a name (e.g. repeated `List Item` in a nav, or repeated `Card` in a grid of same-shaped cards — renaming those would actively hurt, since the repetition itself is the point). How deep to check is a real tradeoff: shallow (root only) misses most real duplicates in a typical multi-section page, since `Container`/`Section` collisions are just as common 3-4 levels down as at the top. But going deeper without limit raises false-positive risk, since repeated card/list patterns get more common the deeper you go. Offer the user a depth choice rather than assuming one:
 
 - **Depth 1**: direct children of the root node
 - **Depth 2**: direct children of the root, plus their direct children
+- **Depth 4**: down 4 levels from the root
+- **Full tree** (unbounded, same reach as Step 3's walk): only reachable via free-text/"Other" input (e.g. the user types "全部" / "unlimited" / a specific depth like "6"), not a listed option — see the question format below.
 
-At the chosen depth, group nodes by parent, then by name (skip `INSTANCE` subtrees, same as Step 3). Any name shared by 2+ siblings under the same parent is a duplicate-name candidate — this applies regardless of whether that name matched Step 3's auto-generated regex.
+**Collapse pass-through wrapper frames before counting depth or grouping siblings.** Code to Canvas captures routinely insert a padding/margin-only wrapper around real content — a single-child frame whose name is the child's name plus a `:margin` or `:padding` suffix (e.g. `Section:margin` wrapping a `Section`, `Container:margin` wrapping a `Container`). Left uncollapsed, these wrappers silently inflate the raw depth of the content they wrap — two conceptually-sibling sections can end up 2 raw levels apart just because one happened to get wrapped and the other didn't, which makes a fixed depth cutoff miss real duplicates or catch them inconsistently. Before applying the depth scope: for any node whose name matches `/:margin$/` or `/:padding$/` and that has exactly one child, treat it as transparent — don't count it as a depth level, and for grouping purposes treat its child as if it were a direct child of the wrapper's own parent instead. Apply this recursively (a wrapper can wrap another wrapper). Do this only for Step 3.5's depth/grouping logic — it doesn't change Step 3, which already walks the full tree regardless of wrapping.
 
-**If no duplicates are found at either depth, skip this step silently** — don't ask the question below, don't mention it in the output.
+At the chosen (post-collapse) depth, group nodes by their logical parent, then by name (skip `INSTANCE` subtrees, same as Step 3). Any name shared by 2+ siblings under the same logical parent is a duplicate-name candidate — this applies regardless of whether that name matched Step 3's auto-generated regex.
 
-**If duplicates are found**, ask before building candidates:
+**The deeper the scope, the more scrutiny each candidate needs.** At Depth 4 or Full tree, don't flag a duplicate just because the names match — check whether the siblings' children/content actually differ. Siblings that are clearly the *same kind of thing* repeated on purpose (product cards, list rows, icon slots) must be left alone even if their shared name would otherwise qualify; only flag duplicates where the siblings represent structurally or contextually different content that happens to share a generic name.
+
+**If no duplicates are found at any depth, skip this step silently** — don't ask the question below, don't mention it in the output.
+
+**If duplicates are found**, ask before building candidates. Keep this to a single question with at most 4 listed options (tool constraints on choice count), relying on free-text for anything beyond Depth 4:
 
 > このフレームには、同じ名前が複数使われている箇所があります（例: `Section` が4箇所、`Container` が◯箇所）。厳密には自動生成名ではありませんが、区別しにくいので合わせてリネーム対象にしますか？
 > - **含めない**（デフォルト。Step 3の結果のみ適用）
-> - **ルート直下のみ含める**（Depth 1）
-> - **ルート直下+1階層下まで含める**（Depth 2）
+> - **ルート直下のみ**（Depth 1）
+> - **2階層下まで**（Depth 2）
+> - **4階層下まで**（Depth 4）
+>
+> （さらに深く、またはフレーム全体まで見たい場合は「その他」に「全部」「6階層まで」などと自由入力してください）
+
+If the candidate count at the chosen depth is large (roughly 30+, same threshold as Step 3), group the confirmation table by section/region like Step 3 does, rather than presenting an undifferentiated wall of rows.
 
 If the user opts in, infer a semantic name for each duplicate using the same content-based reasoning as Step 3 (position in the tree, sibling/parent context, children content — e.g. the `Section` containing a countdown timer and a coupon code → `PricingSection`; the `Container` holding three stat numbers → `StatsRow`). Merge these into the same candidate list as Step 3's results, tagging the reason so the user can tell the two categories apart (e.g. "重複名の差別化" vs. an auto-generated-name reason).
 

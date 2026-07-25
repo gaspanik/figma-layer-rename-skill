@@ -1,6 +1,6 @@
 # figma-layer-rename — Semantic Layer Naming for Figma Frames
 
-A Claude Code skill that walks an entire Figma FRAME or SECTION, finds auto-generated layer names (`Frame 12`, `Group 4`, `Rectangle 7`, bare `Frame`/`Line`, etc.), infers a semantic name for each from its type, position, and content, and applies the renames via the Plugin API after user confirmation.
+A Claude Code skill that walks an entire Figma FRAME or SECTION, finds auto-generated layer names (`Frame 12`, `Group 4`, `Rectangle 7`, bare `Frame`/`Line`, etc.), infers a semantic name for each from its type, position, and content, and applies the renames via the Plugin API after user confirmation. It can also, on request, spot duplicate-but-real names (four different sections all literally named `Section`) and differentiate those too.
 
 ---
 
@@ -16,6 +16,10 @@ Walk tree, skip INSTANCE subtrees
         │
         ▼
 Detect auto-generated names (Frame N, Group N, Rectangle N, bare Frame/Line, ...)
+        │
+        ▼
+[optional] Detect duplicate generic-but-real sibling names (Section x4, Container x12, ...)
+           at a user-chosen depth, collapsing `:margin`/`:padding` wrapper frames first
         │
         ▼
 Propose semantic names from type + position + sibling/children context
@@ -34,8 +38,9 @@ INSTANCE subtrees are skipped entirely — renaming inside an instance only crea
 ## Scope
 
 - **In scope:** auto-generated layer names anywhere in the tree — `Frame N`, `Group N`, `Rectangle N`, `Ellipse N`, `Vector N`, `Polygon N`, `Star N`, `Line N`, `Arrow N`, `Boolean N`, `Component N`, `Instance N`, with or without a trailing number.
+- **Also in scope (optional pass):** duplicate generic-but-meaningful sibling names — e.g. four top-level sections all literally named `Section`. These names aren't auto-generated (they're real, semantic strings), but sharing one name across structurally distinct siblings is just as hard to navigate. This pass only runs when duplicates are actually found, and only after you pick a depth (root only / 2 levels / 4 levels / free-text for deeper or the full tree). Single-child `:margin`/`:padding`-suffixed wrapper frames — a common Code to Canvas artifact — are treated as transparent when counting depth and grouping siblings, so a section wrapped in a padding frame is still compared against its unwrapped counterparts.
 - **Out of scope:** variable binding, auto-layout changes, component properties. Nothing about the frame's structure or values changes — only names.
-- **Not for components.** `COMPONENT` and `COMPONENT_SET` URLs are not supported.
+- **Not for components.** `COMPONENT` and `COMPONENT_SET` URLs redirect you to the `figma-component-audit-fix` skill instead, which cross-checks variant siblings.
 
 ---
 
@@ -86,7 +91,7 @@ Clean up the generic layer names in this frame: https://www.figma.com/design/...
 
 ## When the skill is triggered automatically
 
-The skill description instructs Claude to use it whenever the user wants to clean up layer names across a whole frame, section, or page layout. Component and component-set URLs are not supported.
+The skill description instructs Claude to use it whenever the user wants to clean up layer names across a whole frame, section, or page layout. Component and component-set URLs route to `figma-component-audit-fix` instead.
 
 ---
 
