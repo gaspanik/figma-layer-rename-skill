@@ -40,7 +40,7 @@ INSTANCE subtrees are skipped entirely — renaming inside an instance only crea
 - **In scope:** auto-generated layer names anywhere in the tree — `Frame N`, `Group N`, `Rectangle N`, `Ellipse N`, `Vector N`, `Polygon N`, `Star N`, `Line N`, `Arrow N`, `Boolean N`, `Component N`, `Instance N`, with or without a trailing number.
 - **Also in scope (optional pass):** duplicate generic-but-meaningful sibling names — e.g. four top-level sections all literally named `Section`. These names aren't auto-generated (they're real, semantic strings), but sharing one name across structurally distinct siblings is just as hard to navigate. This pass only runs when duplicates are actually found, and only after you pick a depth (root only / 2 levels / 4 levels / free-text for deeper or the full tree). Single-child `:margin`/`:padding`-suffixed wrapper frames — a common Code to Canvas artifact — are treated as transparent when counting depth and grouping siblings, so a section wrapped in a padding frame is still compared against its unwrapped counterparts.
 - **Out of scope:** variable binding, auto-layout changes, component properties. Nothing about the frame's structure or values changes — only names.
-- **Not for components.** `COMPONENT` and `COMPONENT_SET` URLs redirect you to the `figma-component-audit-fix` skill instead, which cross-checks variant siblings.
+- **Not for components.** `COMPONENT` and `COMPONENT_SET` URLs are not supported.
 
 ---
 
@@ -91,7 +91,7 @@ Clean up the generic layer names in this frame: https://www.figma.com/design/...
 
 ## When the skill is triggered automatically
 
-The skill description instructs Claude to use it whenever the user wants to clean up layer names across a whole frame, section, or page layout. Component and component-set URLs route to `figma-component-audit-fix` instead.
+The skill description instructs Claude to use it whenever the user wants to clean up layer names across a whole frame, section, or page layout. Component and component-set URLs are not supported.
 
 ---
 
