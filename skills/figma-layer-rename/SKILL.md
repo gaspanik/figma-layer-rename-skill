@@ -1,6 +1,6 @@
 ---
 name: figma-layer-rename
-description: Accepts a Figma FRAME or SECTION URL (or, when running inside Figma's own agent environment, the current canvas selection), walks the entire node tree, detects auto-generated layer names, and renames them to semantic names via the Plugin API after user confirmation. Also offers an optional pass to differentiate duplicate generic-but-meaningful sibling names (e.g. multiple top-level nodes all named `Section` or `Container`) at a bounded depth. Use this whenever the user wants to clean up layer names across a whole frame/section/page layout, not a single component — for single-component or component-set renaming, use figma-component-audit-fix instead.
+description: Accepts a Figma FRAME or SECTION URL (or, when running inside Figma's own agent environment, the current canvas selection), walks the entire node tree, detects auto-generated layer names, and renames them to semantic names via the Plugin API after user confirmation. Also offers an optional pass to differentiate duplicate generic-but-meaningful sibling names (e.g. multiple top-level nodes all named `Section` or `Container`) at a bounded depth. Use this whenever the user wants to clean up layer names across a whole frame/section/page layout. Component and component-set URLs are not supported.
 argument-hint: <figma-frame-url>
 allowed-tools: mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__use_figma
 ---
@@ -24,7 +24,7 @@ Nothing else. No variable binding, no auto-layout changes, no component property
 
 **Target node types:** FRAME or SECTION only.
 
-- If the URL points to a `COMPONENT` or `COMPONENT_SET`, don't proceed — tell the user to use the `figma-component-audit-fix` skill instead. That skill already covers layer renaming for components, and its rename logic also cross-checks variant siblings, which this skill doesn't do.
+- If the URL points to a `COMPONENT` or `COMPONENT_SET`, don't proceed — tell the user that component/component-set URLs aren't supported by this skill.
 - Any other node type (e.g. a single `TEXT` or `RECTANGLE` node): ask the user for a frame or section URL.
 
 **Skip `INSTANCE` subtrees entirely.** A frame will often contain instances of components used elsewhere in the file. Renaming a layer inside an instance only creates a local override on that one instance — it does not touch the main component, so the name silently diverges from every other instance and from the source of truth. When walking the tree, if a node's type is `INSTANCE`, don't inspect or rename it or any of its descendants; just skip past it.
@@ -51,7 +51,7 @@ Call `get_metadata` for the target node to retrieve the full layer hierarchy (no
 Check the root node's type:
 
 - `FRAME` or `SECTION` → continue
-- `COMPONENT` or `COMPONENT_SET` → stop and tell the user: "このURLはコンポーネントです。レイヤー名の修正には `figma-component-audit-fix` スキルを使ってください。" (adapt to the conversation language)
+- `COMPONENT` or `COMPONENT_SET` → stop and tell the user: "このURLはコンポーネントです。このスキルはコンポーネント／コンポーネントセットのURLには対応していません。" (adapt to the conversation language)
 - anything else → ask for a valid frame or section URL
 
 ---
@@ -207,7 +207,7 @@ After applying all approved renames, output:
 ## Error handling
 
 - If neither a parseable URL nor a canvas selection is available: ask for a valid URL or a selection
-- If the node is a `COMPONENT` or `COMPONENT_SET`: redirect the user to `figma-component-audit-fix`
+- If the node is a `COMPONENT` or `COMPONENT_SET`: tell the user component/component-set URLs aren't supported
 - If the node is neither FRAME/SECTION nor COMPONENT/COMPONENT_SET: ask for a valid frame or section URL
 - If `get_metadata` returns an error: report it and ask the user to verify Figma file access
 - If `use_figma` fails for a specific node: report the failure inline and continue with remaining items
