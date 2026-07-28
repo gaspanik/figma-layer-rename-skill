@@ -29,6 +29,8 @@ Nothing else. No variable binding, no auto-layout changes, no component property
 
 **Skip `INSTANCE` subtrees entirely.** A frame will often contain instances of components used elsewhere in the file. Renaming a layer inside an instance only creates a local override on that one instance — it does not touch the main component, so the name silently diverges from every other instance and from the source of truth. When walking the tree, if a node's type is `INSTANCE`, don't inspect or rename it or any of its descendants; just skip past it.
 
+**Treat icon-glyph containers as a single leaf — don't descend into their vector paths.** A container whose children are all primitive path/shape nodes (`VECTOR`, `BOOLEAN_OPERATION`, `STAR`, `ELLIPSE`, `RECTANGLE`, `LINE`), with no text nodes and no further nested containers, is almost always one icon glyph assembled from multiple paths (e.g. an arrow icon made of a head path and a stem path) — the individual paths are implementation detail, not separately meaningful layers. Rename the container itself if its name is auto-generated (per the regex below), then stop there: don't inspect or rename its child paths individually, even if their names also match the auto-generated pattern.
+
 ---
 
 ## Step 1: Resolve the target node
