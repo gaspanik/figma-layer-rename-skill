@@ -13,6 +13,8 @@ Analyze the target Figma FRAME or SECTION (a URL in `$ARGUMENTS`, or the current
 
 **Environment note:** This skill is written against the Figma MCP tools `get_metadata` and `use_figma`, but it also runs in environments that expose the Plugin API differently (e.g. Figma's own Design Agent, which provides an `evaluate_script` tool instead). If `get_metadata` / `use_figma` are not available, substitute whatever Plugin API execution tool the environment provides for both the tree fetch (Step 2) and the renames (Step 5) — the Plugin API code itself is identical. Likewise, if the `figma-use` skill referenced in Step 5 doesn't exist in the environment, skip loading it.
 
+**Recommend a backup before the first write (MCP environment only).** When running via `get_metadata`/`use_figma` (not inside Figma's own Design Agent), this skill typically executes through Claude Code on a file the user isn't watching live in Figma — unlike the Figma-native environment, where a human is on the canvas and can Cmd+Z the instant something looks wrong. A mistake made mid-run can go unnoticed until well past the point an in-session undo would still reach it. Before the first `use_figma` write, suggest the user duplicate the file (Figma's own Duplicate command) or confirm they can reach version history to roll back to before this run. Skip this prompt if `$ARGUMENTS` includes `Orchestrated from` — that means an orchestrator (e.g. `figma-optimize`) already confirmed a backup once before invoking any of its sub-skills — and skip it entirely when running inside Figma's own Design Agent, where the human is already watching live.
+
 ## Scope
 
 This skill fixes two categories of issue:
