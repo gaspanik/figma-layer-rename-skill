@@ -53,7 +53,7 @@ Call `get_metadata` for the target node to retrieve the full layer hierarchy (no
 Check the root node's type:
 
 - `FRAME` or `SECTION` → continue
-- `COMPONENT` or `COMPONENT_SET` → stop and tell the user: "このURLはコンポーネントです。このスキルはコンポーネント／コンポーネントセットのURLには対応していません。" (adapt to the conversation language)
+- `COMPONENT` or `COMPONENT_SET` → stop and tell the user: "This URL points to a component. This skill does not support component or component-set URLs." (adapt to the conversation language)
 - anything else → ask for a valid frame or section URL
 
 ---
@@ -98,7 +98,7 @@ This catches a different problem from Step 3. A name like `Section` or `Containe
 - **Depth 1**: direct children of the root node
 - **Depth 2**: direct children of the root, plus their direct children
 - **Depth 4**: down 4 levels from the root
-- **Full tree** (unbounded, same reach as Step 3's walk): only reachable via free-text/"Other" input (e.g. the user types "全部" / "unlimited" / a specific depth like "6"), not a listed option — see the question format below.
+- **Full tree** (unbounded, same reach as Step 3's walk): only reachable via free-text/"Other" input (e.g. the user types "unlimited" / "all" / a specific depth like "6"), not a listed option — see the question format below.
 
 **Collapse pass-through wrapper frames before counting depth or grouping siblings.** *This sub-rule only applies to Code to Canvas-style captures — if no node name in the tree matches `/:(margin|padding)$/`, skip this entire paragraph and use raw depth as-is.* Code to Canvas captures routinely insert a padding/margin-only wrapper around real content — a single-child frame whose name is the child's name plus a `:margin` or `:padding` suffix (e.g. `Section:margin` wrapping a `Section`, `Container:margin` wrapping a `Container`). Left uncollapsed, these wrappers silently inflate the raw depth of the content they wrap — two conceptually-sibling sections can end up 2 raw levels apart just because one happened to get wrapped and the other didn't, which makes a fixed depth cutoff miss real duplicates or catch them inconsistently. Before applying the depth scope: for any node whose name matches `/:margin$/` or `/:padding$/` and that has exactly one child, treat it as transparent — don't count it as a depth level, and for grouping purposes treat its child as if it were a direct child of the wrapper's own parent instead. Apply this recursively (a wrapper can wrap another wrapper). Do this only for Step 3.5's depth/grouping logic — it doesn't change Step 3, which already walks the full tree regardless of wrapping.
 
@@ -110,17 +110,17 @@ At the chosen (post-collapse) depth, group nodes by their logical parent, then b
 
 **If duplicates are found**, ask before building candidates. Keep this to a single question with at most 4 listed options (tool constraints on choice count), relying on free-text for anything beyond Depth 4:
 
-> このフレームには、同じ名前が複数使われている箇所があります（例: `Section` が4箇所、`Container` が◯箇所）。厳密には自動生成名ではありませんが、区別しにくいので合わせてリネーム対象にしますか？
-> - **含めない**（デフォルト。Step 3の結果のみ適用）
-> - **ルート直下のみ**（Depth 1）
-> - **2階層下まで**（Depth 2）
-> - **4階層下まで**（Depth 4）
+> This frame reuses the same name in several places (e.g. `Section` ×4, `Container` ×N). They are not strictly auto-generated names, but they are hard to tell apart — include them in the rename?
+> - **Don't include** (default — apply Step 3 results only)
+> - **Root children only** (Depth 1)
+> - **Down 2 levels** (Depth 2)
+> - **Down 4 levels** (Depth 4)
 >
-> （さらに深く、またはフレーム全体まで見たい場合は「その他」に「全部」「6階層まで」などと自由入力してください）
+> (For a deeper scan or the whole frame, choose "Other" and type e.g. "all" or "6 levels".)
 
 If the candidate count at the chosen depth is large (roughly 30+, same threshold as Step 3), group the confirmation table by section/region like Step 3 does, rather than presenting an undifferentiated wall of rows.
 
-If the user opts in, infer a semantic name for each duplicate using the same content-based reasoning as Step 3 (position in the tree, sibling/parent context, children content — e.g. the `Section` containing a countdown timer and a coupon code → `PricingSection`; the `Container` holding three stat numbers → `StatsRow`). Merge these into the same candidate list as Step 3's results, tagging the reason so the user can tell the two categories apart (e.g. "重複名の差別化" vs. an auto-generated-name reason).
+If the user opts in, infer a semantic name for each duplicate using the same content-based reasoning as Step 3 (position in the tree, sibling/parent context, children content — e.g. the `Section` containing a countdown timer and a coupon code → `PricingSection`; the `Container` holding three stat numbers → `StatsRow`). Merge these into the same candidate list as Step 3's results, tagging the reason so the user can tell the two categories apart (e.g. "duplicate-name differentiation" vs. an auto-generated-name reason).
 
 If the user declines, proceed to Step 4 with only Step 3's candidates (if any).
 
@@ -131,17 +131,17 @@ If the user declines, proceed to Step 4 with only Step 3's candidates (if any).
 If no auto-generated names were found in Step 3, and Step 3.5 found no duplicates (or the user declined to include them), output:
 
 ```
-✅ 自動生成されたレイヤー名は見つかりませんでした。
-すべてのレイヤーがすでに意味のある名前になっています。
+✅ No auto-generated layer names found.
+Every layer already has a meaningful name.
 ```
 
 Then stop.
 
 **Staged processing for large batches:** If the combined candidate list is large (roughly 30+, same threshold as Step 3's grouping rule), don't dump the whole table at once — first ask how the user wants to review:
 
-> ◯件のリネーム候補が見つかりました。どう確認しますか？
-> - **一括で確認**（セクション別にグループ化した1つの表で全件提示）
-> - **セクションごとに順番に処理**（1セクション分ずつ提示→承認→適用を繰り返す）
+> Found N rename candidates. How would you like to review them?
+> - **Review all at once** (one table, grouped by section)
+> - **Section by section** (present → approve → apply, one section at a time)
 
 If the user picks staged processing, run the Step 4 → Step 5 loop once per section (present that section's candidates, get approval, apply) before moving to the next section, and keep a running tally for the final Step 6 report. Below the threshold, skip this question and present everything in one table.
 
